@@ -1,20 +1,39 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardNav from "@/components/DashboardNav";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  if (!user) {
-    redirect("/login");
+  const checkAuth = async () => {
+    try {
+      const response = await fetch("/api/auth/check");
+      if (!response.ok) {
+        router.push("/login");
+      }
+    } catch {
+      router.push("/login");
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (
