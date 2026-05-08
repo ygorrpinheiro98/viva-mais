@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import DashboardNav from "@/components/DashboardNav";
+import Sidebar from "@/components/Sidebar";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +11,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -30,16 +31,32 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--background)" }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center animate-pulse">
+            <div className="w-6 h-6 rounded-full bg-white/30 animate-ping" />
+          </div>
+          <p className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>
+            Carregando...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardNav />
-      <main>{children}</main>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--background)" }}>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <main
+        className={`min-h-screen transition-all duration-300 lg:pl-[240px] ${
+          sidebarCollapsed ? "lg:pl-[72px]" : ""
+        }`}
+      >
+        {children}
+      </main>
     </div>
   );
 }

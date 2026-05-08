@@ -117,6 +117,28 @@ ALTER TABLE tips ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "tips_select" ON tips FOR SELECT USING (true);
 
 -- =============================================
+-- RUNNING ZONES (Jack Daniels VDOT)
+-- =============================================
+
+CREATE TABLE running_zones (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  vdot DECIMAL(4,1),
+  recent_3k_sec INTEGER,
+  recent_5k_sec INTEGER,
+  preferred_unit TEXT DEFAULT 'pace',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE running_zones ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "running_zones_select" ON running_zones FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "running_zones_insert" ON running_zones FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "running_zones_update" ON running_zones FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "running_zones_delete" ON running_zones FOR DELETE USING (auth.uid() = user_id);
+
+-- =============================================
 -- STRAVA INTEGRATION
 -- =============================================
 

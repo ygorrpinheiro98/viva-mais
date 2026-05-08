@@ -109,6 +109,17 @@ export async function POST(request: NextRequest) {
           max_heartrate: activity.max_heartrate,
           calories: activity.calories,
           description: activity.description,
+          map_polyline: activity.map?.summary_polyline || null,
+          start_latlng_lat: activity.start_latlng?.[0] || null,
+          start_latlng_lng: activity.start_latlng?.[1] || null,
+          end_latlng_lat: activity.end_latlng?.[0] || null,
+          end_latlng_lng: activity.end_latlng?.[1] || null,
+          average_cadence: activity.average_cadence || null,
+          average_watts: activity.average_watts || null,
+          weighted_average_watts: activity.weighted_average_watts || null,
+          kilojoules: activity.kilojoules || null,
+          achievement_count: activity.achievement_count || 0,
+          pr_count: activity.pr_count || 0,
           import_source: "strava",
         });
 

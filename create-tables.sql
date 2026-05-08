@@ -109,6 +109,17 @@ BEGIN
             max_heartrate DECIMAL,
             calories DECIMAL,
             description TEXT,
+            map_polyline TEXT,
+            start_latlng_lat DECIMAL,
+            start_latlng_lng DECIMAL,
+            end_latlng_lat DECIMAL,
+            end_latlng_lng DECIMAL,
+            average_cadence DECIMAL,
+            average_watts DECIMAL,
+            weighted_average_watts DECIMAL,
+            kilojoules DECIMAL,
+            achievement_count INTEGER,
+            pr_count INTEGER,
             import_source TEXT DEFAULT 'strava',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );

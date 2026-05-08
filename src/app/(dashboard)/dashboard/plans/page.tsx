@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Plus, Calendar, Dumbbell, TrendingUp, Clock, Edit2, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 type Plan = {
   id: string;
@@ -13,13 +16,17 @@ type Plan = {
   workouts_per_week: number;
   content: any;
   downloads: number;
+  user_id?: string;
+  start_date?: string;
 };
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [myPlans, setMyPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "running" | "cycling">("all");
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
@@ -27,16 +34,30 @@ export default function PlansPage() {
   }, []);
 
   const fetchPlans = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
     const { data } = await supabase
       .from("workout_plans")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (data) setPlans(data);
+    if (data) {
+      setPlans(data);
+      if (user) {
+        const userPlans = data.filter((p) => p.user_id === user.id);
+        setMyPlans(userPlans);
+      }
+    }
     setLoading(false);
   };
 
-  const filteredPlans = plans.filter(p => {
+  const handleDelete = async (id: string) => {
+    await supabase.from("workout_plans").delete().eq("id", id);
+    setShowDeleteConfirm(null);
+    fetchPlans();
+  };
+
+  const filteredPlans = plans.filter((p) => {
     if (filter === "all") return true;
     return p.sport === filter;
   });
@@ -56,120 +77,194 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">📋 Planos de Treino</h1>
-        <p className="text-muted-foreground">Treinos prontos para você baixar e seguir</p>
+    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold" style={{ color: "var(--foreground)" }}>
+            Planos de Treino
+          </h1>
+          <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+            Gerencie seus planos e acompanhe seu progresso
+          </p>
+        </div>
+        <Link
+          href="/dashboard/plans/create"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:opacity-90"
+        >
+          <Plus className="w-4 h-4" />
+          Criar Plano
+        </Link>
       </div>
 
-      <div className="flex gap-2 mb-8">
+      {myPlans.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--foreground)" }}>
+            Meus Planos
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {myPlans.map((plan) => (
+              <div
+                key={plan.id}
+                className="rounded-xl border overflow-hidden"
+                style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}
+              >
+                <Link href={`/dashboard/plans/${plan.id}`} className="block p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: "var(--primary)", opacity: 0.1 }}
+                    >
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: "var(--muted)", color: "var(--muted-foreground)" }}
+                    >
+                      {plan.duration_weeks} semanas
+                    </span>
+                  </div>
+                  <h3 className="font-semibold mb-1">{plan.title}</h3>
+                  <p className="text-sm line-clamp-2 mb-3" style={{ color: "var(--muted-foreground)" }}>
+                    {plan.description}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    <span className="flex items-center gap-1">
+                      <Dumbbell className="w-3 h-3" />
+                      {plan.workouts_per_week}x/semana
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      {plan.downloads} downloads
+                    </span>
+                  </div>
+                </Link>
+                <div
+                  className="flex border-t"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <Link
+                    href={`/dashboard/plans/${plan.id}`}
+                    className="flex-1 py-2 text-center text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    Ver detalhes
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+          Explorar Planos
+        </h2>
+      </div>
+
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {[
-          { id: "all", label: "🌐 Todos" },
+          { id: "all", label: "Todos" },
           { id: "running", label: "🏃 Corrida" },
           { id: "cycling", label: "🚴 Ciclismo" },
         ].map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id as any)}
-            className={`px-4 py-2 rounded-full font-medium transition-all ${
-              filter === f.id ? "bg-primary text-white" : "bg-muted hover:bg-muted/70"
+            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+              filter === f.id ? "bg-primary text-white" : ""
             }`}
+            style={filter !== f.id ? { backgroundColor: "var(--muted)" } : {}}
           >
             {f.label}
           </button>
         ))}
       </div>
 
-      {selectedPlan ? (
-        <div className="glass-effect rounded-2xl p-6">
-          <button
-            onClick={() => setSelectedPlan(null)}
-            className="mb-4 text-primary hover:underline"
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredPlans.map((plan) => (
+          <div
+            key={plan.id}
+            className="rounded-xl border overflow-hidden"
+            style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}
           >
-            ← Voltar para lista
-          </button>
-
-          <h2 className="text-2xl font-bold mb-4">{selectedPlan.title}</h2>
-          <p className="text-muted-foreground mb-6">{selectedPlan.description}</p>
-
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <div className="text-2xl font-bold gradient-text">{selectedPlan.duration_weeks}</div>
-              <div className="text-sm text-muted-foreground">semanas</div>
-            </div>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <div className="text-2xl font-bold gradient-text">{selectedPlan.workouts_per_week}x</div>
-              <div className="text-sm text-muted-foreground">por semana</div>
-            </div>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <div className="text-2xl font-bold gradient-text">{selectedPlan.downloads}</div>
-              <div className="text-sm text-muted-foreground">downloads</div>
-            </div>
-          </div>
-
-          {selectedPlan.content && (
-            <div className="space-y-3">
-              <h3 className="font-bold">Treinos:</h3>
-              {Object.entries(selectedPlan.content).map(([week, workouts]) => (
-                <div key={week} className="p-4 rounded-xl bg-muted/30">
-                  <div className="font-medium mb-2 capitalize">{week.replace(/(\d)/g, ' $1 ').trim()}</div>
-                  <div className="space-y-2">
-                    {Object.entries(workouts as any).map(([day, workout]) => (
-                      <div key={day} className="flex items-center gap-2 text-sm">
-                        <span className="font-medium capitalize w-16">{day}:</span>
-                        <span className="text-muted-foreground">{workout as string}</span>
-                      </div>
-                    ))}
-                  </div>
+            <Link href={`/dashboard/plans/${plan.id}`} className="block p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    backgroundColor: plan.sport === "running" ? "#22c55e20" : "#3b82f620",
+                    color: plan.sport === "running" ? "#22c55e" : "#3b82f6",
+                  }}
+                >
+                  {plan.sport === "running" ? "🏃" : "🚴"}
                 </div>
-              ))}
-            </div>
-          )}
-
-          <button className="w-full mt-6 py-4 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:opacity-90">
-            📥 Baixar Plano
-          </button>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {filteredPlans.map((plan) => (
-            <div
-              key={plan.id}
-              className="p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all"
-              onClick={() => setSelectedPlan(plan)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                  <span className="text-2xl">
-                    {plan.sport === "running" ? "🏃" : "🚴"}
-                  </span>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <div>{plan.duration_weeks} semanas</div>
-                  <div>{plan.workouts_per_week}x/semana</div>
-                </div>
-              </div>
-
-              <h3 className="text-lg font-bold mb-2">{plan.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-
-              <div className="flex items-center justify-between">
-                <span className={`text-sm font-medium ${levels[plan.level as keyof typeof levels]?.color}`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    levels[plan.level as keyof typeof levels]?.color || ""
+                  }`}
+                  style={{ backgroundColor: "var(--muted)" }}
+                >
                   {levels[plan.level as keyof typeof levels]?.label || plan.level}
                 </span>
-                <span className="text-sm text-muted-foreground">
-                  📥 {plan.downloads}
+              </div>
+              <h3 className="font-semibold mb-1">{plan.title}</h3>
+              <p className="text-sm line-clamp-2 mb-3" style={{ color: "var(--muted-foreground)" }}>
+                {plan.description}
+              </p>
+              <div className="flex items-center gap-4 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {plan.duration_weeks} semanas
+                </span>
+                <span className="flex items-center gap-1">
+                  <Dumbbell className="w-3 h-3" />
+                  {plan.workouts_per_week}x/semana
                 </span>
               </div>
-            </div>
-          ))}
+            </Link>
+          </div>
+        ))}
+      </div>
+
+      {filteredPlans.length === 0 && (
+        <div className="text-center py-12 rounded-xl border" style={{ backgroundColor: "var(--card)", borderColor: "var(--border)" }}>
+          <Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: "var(--muted-foreground)" }} />
+          <p style={{ color: "var(--muted-foreground)" }}>Nenhum plano encontrado</p>
         </div>
       )}
 
-      {filteredPlans.length === 0 && !selectedPlan && (
-        <div className="text-center py-12 glass-effect rounded-2xl">
-          <p className="text-muted-foreground text-lg">Nenhum plano encontrado</p>
-          <p className="text-muted-foreground">Novos planos em breve!</p>
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowDeleteConfirm(null)}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative w-full max-w-sm rounded-xl p-6"
+            style={{ backgroundColor: "var(--card)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold mb-2">Excluir plano?</h2>
+            <p className="text-sm mb-4" style={{ color: "var(--muted-foreground)" }}>
+              Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-2 rounded-lg border font-medium"
+                style={{ borderColor: "var(--border)" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDelete(showDeleteConfirm)}
+                className="flex-1 py-2 rounded-lg bg-red-500 text-white font-medium"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
