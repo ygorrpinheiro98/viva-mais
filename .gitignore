@@ -36,3 +36,9 @@ next-env.d.ts
 # local agent / build outputs
 .agent
 /dist
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
